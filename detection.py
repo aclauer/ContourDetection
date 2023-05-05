@@ -49,6 +49,13 @@ def process_sequence(sequence_path, labels):
         id_to_color[labelId] = color['pixelValue'][0:3]
     print(id_to_color)
 
+    for id in id_to_color.keys():
+        # Iterate through each class present in the image
+        print(id_to_color[id])
+        mask = isolate_color(segmentation, np.array(id_to_color[id]))
+        contours = get_polygon(mask)
+        #print(contours)
+
 
 def get_colors(frame_data_path):
     with open(frame_data_path) as json_file:
@@ -76,9 +83,11 @@ def isolate_color(img, color):
     return mask
 
 def get_polygon(mask):
-    imgray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
-    ret, thresh = cv.threshold(imgray, 127, 255, 0)
+    #imgray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
+    ret, thresh = cv.threshold(mask, 127, 255, 0)
     contours, heirarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    print("contour shape: " + str(np.shape(contours[0])))
+    print(type(contours))
     return contours
 
 def _extract_info(frame):

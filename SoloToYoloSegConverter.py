@@ -43,6 +43,22 @@ class SoloToYoloSegConverter:
                 shutil.copy(image_source_path, image_destination_path)
                 i += 1
 
+        # Move correct number of files to validation set
+        training_path = os.path.join(output_path, "dataset", "labels", "train")
+        training_samples = os.listdir(training_path)
+        num_val_samples = int(len(training_samples) * (1-train_split))
+        print(f"Moving {num_val_samples} samples to validation")
+
+        for i in range(len(training_samples) - num_val_samples, len(training_samples)):
+            source_file = os.path.join(output_path, "dataset", "labels", "train", str(f'{i}.txt'))
+            destination_file = os.path.join(output_path, "dataset", "labels", "val", str(f'{i}.txt'))
+            shutil.copy(source_file, destination_file)
+
+            source_file = os.path.join(output_path, "dataset", "images", "train", str(f'{i}.png'))
+            destination_file = os.path.join(output_path, "dataset", "images", "val", str(f'{i}.png'))
+            shutil.copy(source_file, destination_file)
+
+
 
     def process_sequence(self, sequence_path, labels, output_path):
         segmentation = cv.imread(f'{sequence_path}/step0.camera.SemanticSegmentation.png')
@@ -103,12 +119,3 @@ class SoloToYoloSegConverter:
         ret, thresh = cv.threshold(mask, 127, 255, 0)
         contours, heirarchy = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         return contours
-    
-
-def main():
-    print("Here1")
-    solo_to_yolo = SoloToYoloSegConverter("/Users/andrewlauer/Downloads/solo")
-    solo_to_yolo.convert("solo", "/Users/andrewlauer/Documents/projects/ContourDetection")
-
-if __name__ == "__main__":
-    main()

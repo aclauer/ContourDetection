@@ -3,10 +3,8 @@ import cv2 as cv
 import pandas as pd
 import os
 import json
-print("Imported the basics.")
 
 from pysolotools.consumers import Solo
-print("Imported pysolotools.")
 
 pd.set_option('display.max_rows', None)
 
@@ -41,28 +39,59 @@ for frame in solo.frames():
 
 def process_sequence(sequence_path, labels):
     segmentation = cv.imread(f'{sequence_path}/step0.camera.SemanticSegmentation.png')
+    print(segmentation.shape)
+    width, height, depth = segmentation.shape
+    print(width)
+    print(height)
     colors = get_colors(f'{sequence_path}/step0.frame_data.json')
-    print(colors)
+    #print(colors)
     id_to_color = {}
     for color in colors:
         labelId = labels[color['labelName']]
+        #print(labelId)
         id_to_color[labelId] = color['pixelValue'][0:3]
-    print(id_to_color)
+    #print(id_to_color)
 
+    i = 0
     for id in id_to_color.keys():
+        i += 1
         # Iterate through each class present in the image
-        print(id_to_color[id])
-        mask = isolate_color(segmentation, np.array(id_to_color[id]))
+        print(id)
+        print(type(id_to_color[id]))
+        color = np.array(id_to_color[id])
+        mask = isolate_color(segmentation, np.flip(color))
+        cv.imshow("Window", mask)
+        cv.waitKey(0)
+        
         contours = get_polygon(mask)
+        print(len(contours))
+        cv.drawContours(segmentation, contours, -1, (127,127,127), 3)
+        cv.imshow("Window", segmentation)
+        cv.waitKey(0)
+        #print(id_to_color[id])
         #print(contours)
+        add_label_to_file('label.txt', width, height, id, contours)
+    #print(i)
 
+def add_label_to_file(path, width, height, label_id, contours):
+    f = open(path, 'a')
+    for contour in contours:
+        # Write class id to a new line
+        f.write(f"{label_id}")
+        for point in contour:
+            f.write(f" {point[0][0]/width} {point[0][1]/height}")
+        f.write("\n")
+    f.close()
 
 def get_colors(frame_data_path):
     with open(frame_data_path) as json_file:
         data = json.load(json_file)
         capture = data['captures'][0]
-        annotations = capture['annotations'][0]
-        instances = annotations['instances']
+        print(type(capture['annotations'][0]))
+        for annotation in capture['annotations']:
+            print(type(annotation))
+            if annotation["id"] == "SemanticSegmentation":
+                instances = annotation['instances']
         return instances
 
 def get_labels(annotation_definition_path):
@@ -75,19 +104,27 @@ def get_labels(annotation_definition_path):
             class_mappings[label['label_name']] = label['label_id']
     return class_mappings
 
-
-
 def isolate_color(img, color):
     mask = cv.inRange(img, color, color)
-    print(mask.shape)
+    #print(mask.shape)
     return mask
 
 def get_polygon(mask):
     #imgray = cv.cvtColor(mask, cv.COLOR_BGR2GRAY)
     ret, thresh = cv.threshold(mask, 127, 255, 0)
-    contours, heirarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    print("contour shape: " + str(np.shape(contours[0])))
-    print(type(contours))
+    contours, heirarchy = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    #print("contour shape: " + str(np.shape(contours[0])))
+    #print(contours)
+    #print(type(contours))
+    #print(len(contours))
+    #for instance in contours:
+    #    for point in instance:
+            #print(point[0])
+    #        print(f"{point[0][0]} {point[0][1]}")
+        #print(instance)
+    #    print(type(instance))
+    #    print(np.shape(instance))
+        #print(instance[0][0][1])
     return contours
 
 def _extract_info(frame):
@@ -101,7 +138,7 @@ def _extract_info(frame):
             return mask_file, colors
 
 labels = get_labels('/Users/andrewlauer/Downloads/solo/annotation_definitions.json')
-process_sequence('/Users/andrewlauer/Downloads/solo/sequence.2', labels)
+process_sequence('/Users/andrewlauer/Downloads/solo/sequence.0', labels)
 
 #def _get_polygon(mask, color):
 #    cv.load
